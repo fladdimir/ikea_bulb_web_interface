@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>
+        bulb control
+    </title>
+    <style>
+        .center-screen {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            min-height: 100vh;
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 34px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            -webkit-transition: .4s;
+            transition: .4s;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 26px;
+            width: 26px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            -webkit-transition: .4s;
+            transition: .4s;
+        }
+
+        input:checked+.slider {
+            background-color: #2196F3;
+        }
+
+        input:focus+.slider {
+            box-shadow: 0 0 1px #2196F3;
+        }
+
+        input:checked+.slider:before {
+            -webkit-transform: translateX(26px);
+            -ms-transform: translateX(26px);
+            transform: translateX(26px);
+        }
+
+        .loader {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            display: inline-block;
+            border-top: 3px solid #2196F3;
+            border-right: 3px solid transparent;
+            box-sizing: border-box;
+            animation: rotation 1s linear infinite;
+        }
+
+        @keyframes rotation {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="center-screen">
+
+        <div id="controls" hidden>
+            <div>
+                <label class="switch">
+                    <input type="checkbox" id="toggle">
+                    <span class="slider"></span>
+                </label>
+            </div>
+            <br>
+            <div>
+                <input type="range" id="brightness" name="brightness" min="0" max="254">
+                <label for="brightness">brightness</label>
+            </div>
+            <br>
+            <div>
+                <input type="range" id="color_temp" name="color_temp" min="250" max="454">
+                <label for="color_temp">temperature</label>
+            </div>
+        </div>
+
+        <div id="loader">
+            <span class="loader"></span>
+        </div>
+
+    </div>
+
+    <script>
+        "use-strict";
+        document.addEventListener("DOMContentLoaded", on_document_load);
+        async function on_document_load() {
+
+            const resp = await fetch("/state");
+            const initialState = await resp.json();
+            on_bulb_load(initialState.state, initialState.brightness, initialState.color_temp);
+        }
+        function on_bulb_load(state, brightness, color_temp) {
+            loader = document.getElementById("loader");
+            loader.hidden = true;
+            controls = document.getElementById("controls");
+            controls.hidden = false;
+
+            toggle = document.getElementById("toggle");
+            toggle.checked = state; // tbd: continuous update to most recent actual value
+            toggle.onchange = on_toggle
+
+            brightness_slider = document.getElementById("brightness");
+            brightness_slider.value = brightness;
+            brightness_slider.oninput = on_brightness
+
+            color_temp_slider = document.getElementById("color_temp");
+            color_temp_slider.value = color_temp;
+            color_temp_slider.oninput = on_color_temp
+
+            console.log("controls initialized");
+        }
+
+        function on_toggle(event) {
+            var newVal = event.target.checked;
+            console.log("change toggle to " + newVal);
+            post({ state: newVal ? "ON" : "OFF" })
+        }
+        function on_brightness(event) {
+            var newVal = event.target.value;
+            console.log("change brightness to " + newVal);
+            post({ brightness: newVal });
+        }
+        function on_color_temp(event) {
+            var newVal = event.target.value;
+            console.log("change color_temp to " + newVal);
+            post({ color_temp: newVal });
+        }
+
+        function post(state) {
+            const request = new XMLHttpRequest();
+            request.open("POST", "/state");
+            request.send(JSON.stringify(state));
+        }
+    </script>
+</body>
+
+</html>
